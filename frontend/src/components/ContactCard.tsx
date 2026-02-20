@@ -41,6 +41,12 @@ export function ContactCard({ contact }: Props) {
             <span className="text-white">{contact.sharedFields.email}</span>
           </div>
         )}
+        {identity?.email && !contact.sharedFields.email && (
+          <div className="flex justify-between">
+            <span className="text-gray-400">Email</span>
+            <span className="text-white">{identity.email}</span>
+          </div>
+        )}
         {identity?.twitter && (
           <div className="flex justify-between">
             <span className="text-gray-400">Twitter</span>

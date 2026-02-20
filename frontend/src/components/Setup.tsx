@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { web3Enable, web3Accounts } from '@polkadot/extension-dapp';
 import type { InjectedAccountWithMeta } from '@polkadot/extension-inject/types';
+import { fetchOnChainIdentity } from '../lib/identity';
 import type { SharedFields } from '../types';
 
 interface Props {
@@ -20,6 +21,7 @@ export function Setup({ onCreate, onConnectExtension, pendingMnemonic, onAcknowl
   const [extensionAccounts, setExtensionAccounts] = useState<InjectedAccountWithMeta[]>([]);
   const [extensionChecked, setExtensionChecked] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<InjectedAccountWithMeta | null>(null);
+  const [loadingIdentity, setLoadingIdentity] = useState(false);
   const [mode, setMode] = useState<'choose' | 'extension' | 'new'>('choose');
 
   useEffect(() => {
@@ -103,10 +105,14 @@ export function Setup({ onCreate, onConnectExtension, pendingMnemonic, onAcknowl
             <h1 className="text-3xl font-bold text-pink-400">Drop</h1>
             <p className="text-gray-400 mt-1 text-sm">Using account from extension</p>
           </div>
-          <div className="bg-gray-800 rounded-xl p-3 mb-6">
+          <div className="bg-gray-800 rounded-xl p-3 mb-2">
             <p className="text-white font-medium text-sm">{selectedAccount.meta.name}</p>
             <p className="text-gray-500 font-mono text-xs truncate">{selectedAccount.address}</p>
           </div>
+          {loadingIdentity
+            ? <p className="text-xs text-pink-400 animate-pulse mb-4">Fetching on-chain identity…</p>
+            : <p className="text-xs text-gray-600 mb-4">Fields prefilled from on-chain identity — edit as needed.</p>
+          }
           {contactForm(() => {
             onConnectExtension(
               selectedAccount.address,
@@ -131,7 +137,18 @@ export function Setup({ onCreate, onConnectExtension, pendingMnemonic, onAcknowl
           </div>
           <div className="space-y-2 mb-6">
             {extensionAccounts.map(acc => (
-              <button key={acc.address} onClick={() => setSelectedAccount(acc)}
+              <button key={acc.address}
+                onClick={async () => {
+                  setSelectedAccount(acc);
+                  setLoadingIdentity(true);
+                  const identity = await fetchOnChainIdentity(acc.address);
+                  if (identity) {
+                    if (identity.display) setDisplayName(identity.display);
+                    if (identity.email) setEmail(identity.email);
+                    if (identity.twitter) setTelegram(identity.twitter);
+                  }
+                  setLoadingIdentity(false);
+                }}
                 className="w-full bg-gray-800 hover:bg-gray-700 rounded-xl p-3 text-left transition-colors">
                 <p className="text-white font-medium text-sm">{acc.meta.name || 'Unnamed account'}</p>
                 <p className="text-gray-500 font-mono text-xs truncate">{acc.address}</p>

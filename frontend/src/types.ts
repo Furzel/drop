@@ -31,6 +31,7 @@ export interface Contact {
 export interface OnChainIdentity {
   display?: string;
   verified: boolean;
+  email?: string;
   twitter?: string;
   web?: string;
 }
