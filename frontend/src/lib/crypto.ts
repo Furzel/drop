@@ -1,7 +1,12 @@
 import { Keyring } from '@polkadot/keyring';
 import { mnemonicGenerate, signatureVerify } from '@polkadot/util-crypto';
-import { u8aToHex } from '@polkadot/util';
+import { u8aToHex, stringToHex } from '@polkadot/util';
+import { web3FromAddress } from '@polkadot/extension-dapp';
 import type { KeyringPair } from '@polkadot/keyring/types';
+
+export type DropSigner =
+  | { type: 'local'; pair: KeyringPair }
+  | { type: 'extension'; address: string };
 
 export function generateWallet() {
   const mnemonic = mnemonicGenerate();
@@ -10,7 +15,7 @@ export function generateWallet() {
   return {
     address: pair.address,
     publicKey: u8aToHex(pair.publicKey),
-    mnemonic, // shown once to user during setup, then stored in localStorage
+    mnemonic,
   };
 }
 
@@ -19,10 +24,19 @@ export function pairFromMnemonic(mnemonic: string): KeyringPair {
   return keyring.addFromMnemonic(mnemonic);
 }
 
-export function signPayload(pair: KeyringPair, payload: object): string {
+export async function signPayloadAsync(signer: DropSigner, payload: object): Promise<string> {
   const message = JSON.stringify(payload);
-  const signature = pair.sign(message);
-  return u8aToHex(signature); // '0x...' prefixed
+  if (signer.type === 'local') {
+    return u8aToHex(signer.pair.sign(message));
+  } else {
+    const injector = await web3FromAddress(signer.address);
+    const { signature } = await injector.signer.signRaw!({
+      address: signer.address,
+      data: stringToHex(message),
+      type: 'bytes',
+    });
+    return signature; // already '0x...' prefixed
+  }
 }
 
 export function verifyPayload(

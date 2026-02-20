@@ -1,7 +1,8 @@
 export interface LocalProfile {
-  address: string;        // SS58 Polkadot address
-  publicKey: string;      // hex
-  mnemonic: string;       // stored locally only, never transmitted; used to re-derive keypair
+  address: string;           // SS58 Polkadot address
+  publicKey: string;         // hex
+  walletType: 'local' | 'extension';
+  mnemonic?: string;         // local wallets only; used to re-derive keypair
   displayName?: string;
   sharedFields: SharedFields;
 }

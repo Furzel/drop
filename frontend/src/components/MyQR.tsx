@@ -1,17 +1,35 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { encodeQRPayload } from '../lib/qr';
+import type { DropSigner } from '../lib/crypto';
 import type { LocalProfile } from '../types';
-import type { KeyringPair } from '@polkadot/keyring/types';
 
 interface Props {
   profile: LocalProfile;
-  pair: KeyringPair;
+  signer: DropSigner;
 }
 
-export function MyQR({ profile, pair }: Props) {
-  // Re-encode on each render so the timestamp stays fresh
-  const qrValue = useMemo(() => encodeQRPayload(profile, pair), [profile, pair]);
+export function MyQR({ profile, signer }: Props) {
+  const [qrValue, setQrValue] = useState<string>('');
+  const [signing, setSigning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const generateQR = useCallback(async () => {
+    setSigning(true);
+    setError(null);
+    try {
+      const value = await encodeQRPayload(profile, signer);
+      setQrValue(value);
+    } catch (e) {
+      setError('Could not sign QR. Make sure your extension is unlocked.');
+    } finally {
+      setSigning(false);
+    }
+  }, [profile, signer]);
+
+  useEffect(() => {
+    generateQR();
+  }, [generateQR]);
 
   const shortAddress = `${profile.address.slice(0, 8)}…${profile.address.slice(-6)}`;
 
@@ -22,9 +40,17 @@ export function MyQR({ profile, pair }: Props) {
       </h2>
       <p className="text-xs text-gray-500 mb-6 font-mono">{shortAddress}</p>
 
-      <div className="bg-white rounded-2xl p-4 shadow-lg mb-6">
-        <QRCodeSVG value={qrValue} size={220} />
+      <div className="bg-white rounded-2xl p-4 shadow-lg mb-6 w-[252px] h-[252px] flex items-center justify-center">
+        {signing && <p className="text-gray-400 text-sm">Signing…</p>}
+        {error && <p className="text-red-400 text-xs text-center px-2">{error}</p>}
+        {!signing && !error && qrValue && <QRCodeSVG value={qrValue} size={220} />}
       </div>
+
+      {error && (
+        <button onClick={generateQR} className="mb-4 text-sm text-pink-400 hover:text-pink-300">
+          Retry
+        </button>
+      )}
 
       <div className="w-full max-w-xs bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
         {profile.sharedFields.telegram && (
@@ -50,9 +76,7 @@ export function MyQR({ profile, pair }: Props) {
         )}
       </div>
 
-      <p className="text-xs text-gray-600 mt-4 text-center">
-        QR refreshes automatically. Valid for 5 minutes.
-      </p>
+      <p className="text-xs text-gray-600 mt-4 text-center">QR valid for 5 minutes.</p>
     </div>
   );
 }

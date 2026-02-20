@@ -1,34 +1,46 @@
 import { useState, useCallback } from 'react';
 import { generateWallet, pairFromMnemonic } from '../lib/crypto';
+import type { DropSigner } from '../lib/crypto';
 import { storage } from '../lib/storage';
 import type { LocalProfile, SharedFields } from '../types';
-import type { KeyringPair } from '@polkadot/keyring/types';
 
 interface WalletState {
   profile: LocalProfile | null;
-  pair: KeyringPair | null;
-  pendingMnemonic: string | null; // set during setup, cleared after user acknowledges
+  signer: DropSigner | null;
+  pendingMnemonic: string | null;
+}
+
+function signerFromProfile(profile: LocalProfile): DropSigner {
+  if (profile.walletType === 'extension') {
+    return { type: 'extension', address: profile.address };
+  }
+  return { type: 'local', pair: pairFromMnemonic(profile.mnemonic!) };
 }
 
 export function useWallet() {
-  const storedProfile = storage.getProfile();
   const [state, setState] = useState<WalletState>(() => {
-    if (storedProfile) {
-      return {
-        profile: storedProfile,
-        pair: pairFromMnemonic(storedProfile.mnemonic),
-        pendingMnemonic: null,
-      };
+    const stored = storage.getProfile();
+    if (stored) {
+      // backwards compat: profiles saved before walletType was added
+      if (!stored.walletType) stored.walletType = 'local';
+      return { profile: stored, signer: signerFromProfile(stored), pendingMnemonic: null };
     }
-    return { profile: null, pair: null, pendingMnemonic: null };
+    return { profile: null, signer: null, pendingMnemonic: null };
   });
 
   const createWallet = useCallback((sharedFields: SharedFields, displayName?: string) => {
     const { address, publicKey, mnemonic } = generateWallet();
-    const profile: LocalProfile = { address, publicKey, mnemonic, displayName, sharedFields };
+    const profile: LocalProfile = { address, publicKey, mnemonic, walletType: 'local', displayName, sharedFields };
     storage.setProfile(profile);
-    const pair = pairFromMnemonic(mnemonic);
-    setState({ profile, pair, pendingMnemonic: mnemonic });
+    const signer: DropSigner = { type: 'local', pair: pairFromMnemonic(mnemonic) };
+    setState({ profile, signer, pendingMnemonic: mnemonic });
+  }, []);
+
+  const connectExtension = useCallback((address: string, publicKey: string, displayName: string | undefined, sharedFields: SharedFields) => {
+    const profile: LocalProfile = { address, publicKey, walletType: 'extension', displayName, sharedFields };
+    storage.setProfile(profile);
+    const signer: DropSigner = { type: 'extension', address };
+    setState({ profile, signer, pendingMnemonic: null });
   }, []);
 
   const updateSharedFields = useCallback((sharedFields: SharedFields) => {
@@ -46,9 +58,10 @@ export function useWallet() {
 
   return {
     profile: state.profile,
-    pair: state.pair,
+    signer: state.signer,
     pendingMnemonic: state.pendingMnemonic,
     createWallet,
+    connectExtension,
     updateSharedFields,
     acknowledgeMnemonic,
   };

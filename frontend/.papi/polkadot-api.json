@@ -7,6 +7,12 @@
       "metadata": ".papi\\metadata\\dot.scale",
       "genesis": "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3",
       "codeHash": "0xea937e06567742acd4321eb8acc4911a389130405c8ce6a9a6f81e3557d66740"
+    },
+    "westend_people": {
+      "wsUrl": "wss://westend-people-rpc.polkadot.io",
+      "metadata": ".papi\\metadata\\westend_people.scale",
+      "genesis": "0x1eb6fb0ba5187434de017a70cb84d4f47142df1d571d0ef9e7e1407f2b80b93c",
+      "codeHash": "0x2fdb0d90c35b482915403d9f0c9a06e1375bac0c051051cd0a9b7c5afbd5de14"
     }
   }
 }

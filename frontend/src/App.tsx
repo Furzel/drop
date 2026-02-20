@@ -10,36 +10,29 @@ import type { Contact } from './types';
 type Tab = 'card' | 'scan' | 'contacts';
 
 export default function App() {
-  const { profile, pair, pendingMnemonic, createWallet, acknowledgeMnemonic } = useWallet();
+  const { profile, signer, pendingMnemonic, createWallet, connectExtension, acknowledgeMnemonic } = useWallet();
   const { contacts, addContact, exportContacts } = useContacts();
   const [tab, setTab] = useState<Tab>('card');
 
-  if (!profile || !pair || pendingMnemonic) {
+  if (!profile || !signer || pendingMnemonic) {
     return (
       <Setup
         onCreate={createWallet}
+        onConnectExtension={connectExtension}
         pendingMnemonic={pendingMnemonic}
         onAcknowledgeMnemonic={acknowledgeMnemonic}
       />
     );
   }
 
-  const handleSaveContact = (contact: Contact) => {
-    addContact(contact);
-  };
-
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col max-w-md mx-auto">
-      {/* Content */}
       <div className="flex-1 overflow-y-auto pb-20">
-        {tab === 'card' && <MyQR profile={profile} pair={pair} />}
-        {tab === 'scan' && <Scanner onSave={handleSaveContact} />}
-        {tab === 'contacts' && (
-          <ContactList contacts={contacts} onExport={exportContacts} />
-        )}
+        {tab === 'card' && <MyQR profile={profile} signer={signer} />}
+        {tab === 'scan' && <Scanner onSave={(c: Contact) => addContact(c)} />}
+        {tab === 'contacts' && <ContactList contacts={contacts} onExport={exportContacts} />}
       </div>
 
-      {/* Bottom nav */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-gray-900 border-t border-gray-800 flex">
         {(['card', 'scan', 'contacts'] as Tab[]).map(t => {
           const labels: Record<Tab, string> = { card: 'My Card', scan: 'Scan', contacts: 'Contacts' };
