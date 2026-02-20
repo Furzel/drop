@@ -21,13 +21,11 @@ export async function fetchOnChainIdentity(address: string): Promise<OnChainIden
   try {
     const api = await getApi();
     const raw = await api.query.Identity.IdentityOf.getValue(address);
-    console.log('[identity] raw:', raw);
     if (!raw) return null;
 
     // People chain returns a tuple [Registration, Option<username>]; handle both shapes
     const registration = (Array.isArray(raw) ? raw[0] : raw) as any;
     const info = registration.info;
-    console.log('[identity] info:', info);
 
     return {
       display: dataAsText(info.display),
@@ -38,8 +36,7 @@ export async function fetchOnChainIdentity(address: string): Promise<OnChainIden
       twitter: dataAsText(info.twitter),
       web: dataAsText(info.web),
     };
-  } catch (e) {
-    console.error('[identity] error:', e);
+  } catch {
     return null;
   }
 }
